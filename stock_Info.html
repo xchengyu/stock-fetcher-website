@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Stock Search</title>  
+    <meta charset="UTF-8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/main.css">
+<!--    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>-->
+    <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+    <script src="https://code.jquery.com/jquery-1.12.0.min.js"></script>
+<!--    <script src="http://code.highcharts.com/highcharts.js"></script>-->
+        <script src="https://code.highcharts.com/stock/highstock.js"></script>
+    <script src="https://code.highcharts.com/stock/modules/exporting.js"></script>
+    <!--    autocomplete-->
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+<!--    <script src="//code.jquery.com/jquery-1.10.2.js"></script>-->
+    <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+    <link rel="stylesheet" href="/resources/demos/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.14.0/jquery.validate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.14.0/additional-methods.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/2.13.1/OpenLayers.light.js"></script>
+	<script src='http://connect.facebook.net/en_US/all.js'></script>
+     <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+    <link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet">
+    <script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
+    <script src="http://cs-server.usc.edu:32929/moment.js"></script>
+    <script src="http://cs-server.usc.edu:32929/moment-timezone-with-data.js"></script>
+<!--
+    <script src="https://code.highcharts.com/stock/highstock.js"></script>
+    <script src="https://code.highcharts.com/stock/modules/exporting.js"></script>
+-->
+    <style>
+        body{
+                padding: 10px;
+                border: 0px;
+                margin: 0px auto;
+                text-align: center;
+                background-color: cornflowerblue;
+        }
+        .searchform{
+            padding: 10px;
+            border: 0px;
+            margin: 0px auto;
+            height: auto;
+            text-align: left;
+            background-color: white;
+        }
+        .row{
+            padding: 0px;
+            margin:0px;
+        }
+        .col-sm-2{
+            padding: 0px;
+            margin-top:2px;
+        }
+        .col-sm-4{
+            padding: 0px;
+            margin-top:2px;
+        }
+        .col-sm-6{
+            padding: 0px;
+            margin-top:2px;
+        }
+        .col-sm-8{
+            padding: 0px;
+            margin-top:2px;
+        }
+        .line{
+                border: 0px;
+                padding: 0px;
+                width:100%;
+                position: relative;
+                margin:0px auto;
+                top: 10px;
+                border:1px;
+                border-style: solid;
+                border-color:#CCC;
+            }
+        .ui-autocomplete-loading {
+            background: white url("images/ui-anim_basic_16x16.gif")  right center no-repeat;
+            
+            }
+        #ui-id-1{
+            font-size: 0.8em;
+            text-align: left;
+            width: 95%;
+        }
+        .special{
+            width: 50%;
+        }
+    </style>
+
+      <script>
+          tmpdata="";//store current stock
+          $(document).ready(function(){
+              //do something
+              var storage="";
+              var storageObj;
+              if(localStorage.getItem("favorate_stock")==null)
+              {
+                   localStorage.setItem("favorate_stock","");       
+              }
+              else
+              {
+                  storage=localStorage.getItem("favorate_stock");
+                  storageObj=storage.split(",");
+                  var index=0;
+                  for(index=0;index<storageObj.length;index++)
+                  {
+                      tmpdata="";
+                      if(storageObj[index]!=""&&storageObj[index]!=null)
+                      {
+                            var request = $.ajax({  
+                                url:"http://stockinfo-1268.appspot.com/",   
+                                data:{  
+                                    formalsymbol: storageObj[index]  
+                                },  
+                                type:"GET",   
+                                dataType:"json", 
+                                success: function(data){
+                                    tmpdata=data;
+                                    addtofavorlist();
+                                }
+                            }); 
+                      }
+                  }
+              }
+          })
+
+/************************************ autocomplete***********************************/        
+  $(function() {
+
+    $( "#inputsm" ).autocomplete({
+      source: function( request, response ) {
+        $.ajax({
+          url: "http://stockinfo-1268.appspot.com/",
+          type: "GET",
+          dataType: "json",
+          data: {
+            maxRows: 12,
+            symbol: request.term
+          },
+          success: function( data ) {
+            response( 
+                $.map( data, function( item ) {
+                  return {
+                    label: item.Symbol+' - '+item.Name+' ( '+item.Exchange+' ) ',
+                    value: item.Symbol,
+                  }
+                })
+            );
+          }
+        });
+       },
+      minLength: 3,
+      appendTo: "#input",
+      open: function() {
+        $( this ).removeClass( "ui-corner-all" ).addClass( "ui-corner-top" );
+      },
+      close: function() {
+        $( this ).removeClass( "ui-corner-top" ).addClass( "ui-corner-all" );
+      }
+    });
+  });
+/************************************ autocomplete***********************************/
+
+/************************************ search***********************************/
+          function search(){
+               tmpdata="";
+                var request = $.ajax({  
+                  url:"http://stockinfo-1268.appspot.com/",   
+                  data:{  
+                        formalsymbol: $("#inputsm").val()  
+                  },  
+                 type:"GET",   
+                 dataType:"json", 
+                 success: function(data){
+                     
+                     if(typeof(data.Message)=="undefined"){
+                         if(data.Status=="SUCCESS")
+                         {
+                             $("#error").html("");
+                             tmpdata=data;
+                             buildStockDetail();
+                         }
+                         else
+                         {
+                             var ha="Sorry, the statistics for stock "+data.Symbol+" are not available. "
+                             alert(ha);
+                         }
+                     }
+                     else{
+                         if($("#inputsm").val()==null||$("#inputsm").val()=="")
+                         {
+                            $("#error").html("Input cannot be empty!");
+                         }
+                         else
+                         {
+                             $("#error").html("Select a valid entry");
+                         }
+                         $("#error").css("color","red");
+                     }
+                 }
+                });
+          }
+/************************************ search***********************************/
+/************************************ build Stock Detail***********************************/
+          function buildStockDetail()
+          {
+              $("#turnright").removeAttr("disabled");
+             if($("#stockdetail").length==0)
+             {
+                 var ha=$("#twoSection");
+
+                 var frame="";
+                 frame+="<div class='item' id='stockdetail'><table class='table'><thead><tr><th style='text-align:center; background-color:#F0F0F0;'><a class='btn btn-default btn-sm' href='#myCarousel' role='button' data-slide='prev' style='float:left;'><span class='glyphicon glyphicon-chevron-left' aria-hidden='true'></span><span class='sr-only'>Previous</span></a><div>Stock Details</div></th></tr></thead>";
+                 frame+="<tbody><tr><td><div><ul class='nav nav-pills'><li id='pill1' role='presentation' class='active'><a href='javascript:void(0)' onclick='CurrentStock()'><span class='glyphicon glyphicon-time' aria-hidden='true'></span><span class='hidden-xs'>Current</span> Stock</a></li><li id='pill2' role='presentation'><a href='javascript:void(0)' onclick='HistoricalCharts()'><span class='glyphicon glyphicon-stats' aria-hidden='true'></span><span class='hidden-xs'>Historical</span> Charts</a></li><li id='pill3' role='presentation'><a href='javascript:void(0)' onclick='NewsFeeds()'><span class='glyphicon glyphicon-link' aria-hidden='true'></span>News <span class='hidden-xs'>Feeds</span></a></li></ul></div><div class='line'></div><div style='margin-top:20px;' id='realcontent'></div></td></tr></tbody></table></div>";
+                 ha.append(frame);
+             }
+              $("#myCarousel").carousel(1);
+//              $("#stockdetail").attr("class","item active");
+//              $("#favorateList").attr("class","item ");
+              $("#myCarousel").carousel('pause');
+              CurrentStock();
+          }
+/************************************ build Stock Detail***********************************/
+/************************************ CurrentStock()***********************************/
+          function CurrentStock()
+          {
+              $("#pill1").attr("class","active");
+              $("#pill2").attr("class","");
+              $("#pill3").attr("class","");
+              var ha1=$("#realcontent");
+              var tablechart="";
+              tablechart+="<div class='row' style='text-align:left;font-size:1em;'>Stock Details<button type='button' class='btn btn-default' aria-label='Left Align' style='float:right;' onclick='likeornot()'><span class='glyphicon glyphicon-star-empty' id='favor' aria-hidden='true'></span></button><img src='http://cs-server.usc.edu:32929/fb_icon.png' onclick='share()' style='float:right;width:30px;height:30px;'/></div><div class='row' style='margin-top:10px;'><div class='col-sm-6' id='stocktable'><div class='row'><table class='table table-striped' style='text-align:left;font-size:0.8em;'><tbody><tr><td class='special'>Name</td><td id='Name'></td></tr><tr><td class='special'>Symbol</td><td id='Symbol'></td></tr><tr><td class='special'>Last Price</td><td id='LastPrice'></td></tr><tr><td class='special'>Change (Change Percent)</td><td id='ChangePercent'></td></tr><tr><td class='special'>Time and Date</td><td id='TimeandDate'></td></tr><tr><td class='special'>Market Cap</td><td id='MarketCap'></td></tr><tr><td class='special'>Volume</td><td id='Volume'></td></tr><tr><td class='special'>Change YTD(Change Percent YTD)</td><td id='ChangePercentYTD'></td></tr><tr><td class='special'>High Price</td><td id='HighPrice'></td></tr><tr><td class='special'>Low Price</td><td id='LowPrice'></td></tr><tr><td class='special'>Opening Price</td><td id='OpeningPrice'></td></tr></tbody></table></div></div><div class='col-sm-6' id='stockchart'><div class='row' id='insertPic' style='text-align:right'></div>";
+              ha1.html(tablechart);
+              if(localStorage.getItem(tmpdata.Symbol)!=null&&$(tmpdata.Symbol)!=null)
+              {
+                  $("#favor").attr("class","glyphicon glyphicon-star");
+                  $("#favor").css("color","yellow");
+                  if($("#"+tmpdata.Symbol).length==0)
+                  {
+                          addtofavorlist();
+                  }
+              }
+              fillblank();
+          }
+/************************************CurrentStock()***********************************/
+/************************************fillblank***********************************/
+          function fillblank()
+          {
+              $("#Name").html(tmpdata.Name);
+              $("#Symbol").html(tmpdata.Symbol);
+              var lastprice="$"+tmpdata.LastPrice.toFixed(2);
+              $("#LastPrice").html(lastprice);
+              var change=tmpdata.Change.toFixed(2)+"("+tmpdata.ChangePercent.toFixed(2)+"%"+")";
+              if(tmpdata.ChangePercent>0)
+              {
+                  change+="<img src='http://cs-server.usc.edu:45678/hw/hw8/images/up.png' width='20px' height='20px'/>";
+              }
+              else if(tmpdata.ChangePercent<0)
+              {
+                  change+="<img src='http://cs-server.usc.edu:45678/hw/hw8/images/down.png' width='20px' height='20px'/>";
+              }
+              $("#ChangePercent").html(change);
+              var marketcap="";
+              if(tmpdata.MarketCap<50000)
+              {
+                  marketcap+=tmpdata.MarketCap.toFixed(2);
+              }
+              else if(tmpdata.MarketCap<50000000&&tmpdata.MarketCap>=50000)
+              {
+                  marketcap+=(tmpdata.MarketCap/1000000.0).toFixed(2);
+                  marketcap+=" Million";
+              }
+              else
+              {
+                  marketcap+=(tmpdata.MarketCap/1000000000.0).toFixed(2);
+                  marketcap+=" Billion";
+              }
+              $("#MarketCap").html(marketcap);
+              $("#Volume").html(tmpdata.Volume);
+              var changeYTD=tmpdata.ChangeYTD.toFixed(2)+"("+tmpdata.ChangePercentYTD.toFixed(2)+"%"+")";
+              if(tmpdata.ChangePercentYTD>0)
+              {
+                  changeYTD+="<img src='http://cs-server.usc.edu:45678/hw/hw8/images/up.png' width='20px' height='20px'/>";
+              }
+              else if(tmpdata.ChangePercentYTD<0)
+              {
+                  changeYTD+="<img src='http://cs-server.usc.edu:45678/hw/hw8/images/down.png' width='20px' height='20px'/>";
+              }
+              $("#ChangePercentYTD").html(changeYTD);
+              var highprice="$"+tmpdata.High.toFixed(2);
+              $("#HighPrice").html(highprice);
+              var lowprice="$"+tmpdata.Low.toFixed(2);
+              $("#LowPrice").html(lowprice);
+              var openprice="$"+tmpdata.Open.toFixed(2);
+              $("#OpeningPrice").html(openprice);
+              var dateelem=new Date(tmpdata.Timestamp);
+              var timeanddate=moment(dateelem.toISOString());
+              var localtime=timeanddate.tz("America/Los_Angeles").format("DD MMM YYYY HH:mm:ss A");
+              $("#TimeandDate").html(localtime);
+              var ha2=$("#insertPic");
+              var charturl="<img src='http://chart.finance.yahoo.com/t?s="+tmpdata.Symbol+"&lang=en-US&width=400&height=300' style='width:100%;height:100%'/>";
+              ha2.html(charturl);
+          }
+/************************************fillblank***********************************/
+/************************************likeornot***********************************/
+          function likeornot()
+          {
+              if($(".glyphicon-star-empty").length!=0)
+              {
+                    $("#favor").attr("class","glyphicon glyphicon-star");
+                    $("#favor").css("color","yellow");
+                    localStorage.setItem(tmpdata.Symbol, tmpdata.Symbol);
+                    var tmp=localStorage.getItem("favorate_stock");
+                    if(tmp=="")
+                    {
+                        tmp+=tmpdata.Symbol;        
+                    }
+                    else
+                    {
+                        tmp+=","+tmpdata.Symbol;        
+                    }
+                    localStorage.setItem("favorate_stock",tmp);
+                    addtofavorlist();
+              }
+              else
+              {
+                    $("#favor").attr("class","glyphicon glyphicon-star-empty");
+                    $("#favor").css("color","");
+                    localStorage.removeItem(tmpdata.Symbol);
+                    var tmp=localStorage.getItem("favorate_stock");
+                    tmp=tmp.replace(tmpdata.Symbol,"");
+                    localStorage.setItem("favorate_stock",tmp);
+                    $("#"+tmpdata.Symbol).remove();
+                    
+              }
+          }
+/************************************likeornot***********************************/
+/************************************addtofavorlist***********************************/
+          function addtofavorlist()
+          {
+                var haha=$("#needtoinsert");
+                var tablecontent="";
+                tablecontent+="<tr id='"+tmpdata.Symbol+"'>";
+                tablecontent+="<td><a href='javascript:void(0)' onclick='buildfavorstockdetail(event)'>"+tmpdata.Symbol+"</a></td>";
+                tablecontent+="<td>"+tmpdata.Name+"</td>";
+                tablecontent+="<td>$"+tmpdata.LastPrice.toFixed(2)+"</td>";
+                tablecontent+="<td>"+tmpdata.Change.toFixed(2)+"("+tmpdata.ChangePercent.toFixed(2)+"%)";
+                if(tmpdata.ChangePercent>0)
+                {
+                    tablecontent+="<img src='http://cs-server.usc.edu:45678/hw/hw8/images/up.png' width='20px' height='20px'/>";
+                }
+                else if(tmpdata.ChangePercent<0)
+                {
+                    tablecontent+="<img src='http://cs-server.usc.edu:45678/hw/hw8/images/down.png' width='20px' height='20px'/>";
+                }
+                tablecontent+="</td>";
+                var marketcap="";
+                if(tmpdata.MarketCap<50000)
+                {
+                    marketcap+=tmpdata.MarketCap.toFixed(2);
+                }
+                else if(tmpdata.MarketCap<50000000&&tmpdata.MarketCap>=50000)
+                {
+                    marketcap+=(tmpdata.MarketCap/1000000.0).toFixed(2);
+                    marketcap+=" Million";
+                }
+                else
+                {
+                    marketcap+=(tmpdata.MarketCap/1000000000.0).toFixed(2);
+                    marketcap+=" Billion";
+                }
+                tablecontent+="<td>"+marketcap+"</td>";
+                tablecontent+="<td>"+"<button type='button' class='btn btn-default' aria-label='Left Align' onclick='removeList(event)'><span class='glyphicon glyphicon-trash' aria-hidden='true'></span></button>"+"</td>";
+                tablecontent+="</tr>";
+                haha.append(tablecontent);
+                $("#th1").attr("class","");
+                $("#th2").attr("class","");
+                $("#th3").attr("class","");
+          }
+/************************************addtofavorlist***********************************/
+/************************************removeList***********************************/
+          function removeList(event)
+          {
+              var x=event.currentTarget;
+              localStorage.removeItem($(x).parent().parent()[0].id);
+              var tmp=localStorage.getItem("favorate_stock");
+              tmp=tmp.replace($(x).parent().parent()[0].id,"");
+              localStorage.setItem("favorate_stock",tmp);
+              if($(x).parent().parent()[0].id===tmpdata.Symbol)
+              {
+                    $("#favor").attr("class","glyphicon glyphicon-star-empty");
+                    $("#favor").css("color","");
+              }
+              $(x).parent().parent().remove();
+              
+          }
+/************************************removeList***********************************/
+/************************************buildfavorstockdetail***********************************/
+          function buildfavorstockdetail(event)
+          {
+              var x=event.currentTarget;
+              
+              tmpdata="";
+                var request = $.ajax({  
+                  url:"http://stockinfo-1268.appspot.com/",   
+                  data:{  
+                        formalsymbol: $(x).html()  
+                  },  
+                 type:"GET",   
+                 dataType:"json", 
+                 success: function(data){
+                     if(typeof(data.Message)=="undefined"){
+                         $("#error").html("");
+                         tmpdata=data;
+                         buildStockDetail();
+                     }
+                     else{
+                         $("#error").html("Select a valid entry");
+                         $("#error").css("color","red");
+                     } 
+                 }
+                });
+          }
+/************************************buildfavorstockdetail***********************************/
+/************************************update()***********************************/
+          function update(symbolid)
+          {
+              var request = $.ajax({  
+                  url:"http://stockinfo-1268.appspot.com/",   
+                  data:{  
+                        formalsymbol:symbolid  
+                  },  
+                 type:"GET",   
+                 dataType:"json", 
+                 success: function(data){
+                     if(typeof(data.Message)=="undefined"){
+                         $("#error").html("");
+                         var a=$("#"+symbolid).children();
+                         var newPrice="$"+data.LastPrice.toFixed(2);
+                         $(a[2]).html(newPrice);
+                         var tablecontent=data.Change.toFixed(2)+"("+data.ChangePercent.toFixed(2)+"%)";
+                         if(data.ChangePercent>0)
+                         {
+                             tablecontent+="<img src='http://cs-server.usc.edu:45678/hw/hw8/images/up.png' width='20px' height='20px'/>";
+                         }
+                         else if(data.ChangePercent<0)
+                         {
+                             tablecontent+="<img src='http://cs-server.usc.edu:45678/hw/hw8/images/down.png' width='20px' height='20px'/>";
+                         }
+                         $(a[3]).html(tablecontent);
+                     }
+                     else{
+                         $("#error").html("Select a valid entry");
+                         $("#error").css("color","red");
+                     }
+                 }
+                });
+          }
+/************************************update()***********************************/
+/************************************refresh***********************************/
+           function refresh()
+            {
+                if($("#needtoinsert").children().length!=0)
+                {
+                    var a=$("#needtoinsert").children();
+                    for(var i=0;i<a.length;i++)
+                    {
+                        var symbolid=a[i].id;
+                        update(symbolid);
+                    }
+                }
+            }
+/************************************refresh***********************************/
+/************************************autorefresh***********************************/
+           var timeid="";
+           $(function() {
+                $('#Automatic_Refresh').change(function() {
+                    if($("#needtoinsert").children().length!=0)
+                    {
+                        if($(this).prop('checked')==true)
+                        {
+                            timeid=window.setInterval(refresh,5000);                                  
+                        }
+                        else
+                        {
+                            window.clearInterval(timeid);
+                        }
+                    }
+                })
+            })
+/************************************autorefresh***********************************/
+          
+/************************************ HistoricalCharts()***********************************/
+          function HistoricalCharts()
+          {
+              $("#pill1").attr("class","");
+              $("#pill2").attr("class","active");
+              $("#pill3").attr("class","")
+              var requestsend="{'Normalized':false,'NumberOfDays':1095,'DataPeriod':'Day','Elements':[{'Symbol':'"+tmpdata.Symbol+"','Type':'price','Params':['ohlc']}]}";
+              var request = $.ajax({  
+                  url:"http://stockinfo-1268.appspot.com/",   
+                  data:{  
+                        highchart:requestsend  
+                  },  
+                 type:"GET",   
+                 dataType:"json", 
+                 success: function(data){
+                      render(data);
+                      $(".highcharts-input-group").remove();
+                     }
+                     
+                });
+              
+          }
+/************************************ HistoricalCharts()***********************************/
+/************************************ plotchart()***********************************/
+          _fixDate = function(dateIn) {
+    var dat = new Date(dateIn);
+    return Date.UTC(dat.getFullYear(), dat.getMonth(), dat.getDate());
+};
+
+_getOHLC = function(json) {
+    var dates = json.Dates || [];
+    var elements = json.Elements || [];
+    var chartSeries = [];
+
+    if (elements[0]){
+
+        for (var i = 0, datLen = dates.length; i < datLen; i++) {
+            var dat = _fixDate( dates[i] );
+            var pointData = [
+                dat,
+                elements[0].DataSeries['open'].values[i],
+                elements[0].DataSeries['high'].values[i],
+                elements[0].DataSeries['low'].values[i],
+                elements[0].DataSeries['close'].values[i]
+            ];
+            chartSeries.push( pointData );
+        };
+    }
+    return chartSeries;
+};
+
+_getVolume = function(json) {
+    var dates = json.Dates || [];
+    var elements = json.Elements || [];
+    var chartSeries = [];
+
+    if (elements[1]){
+
+        for (var i = 0, datLen = dates.length; i < datLen; i++) {
+            var dat = _fixDate( dates[i] );
+            var pointData = [
+                dat,
+                elements[1].DataSeries['volume'].values[i]
+            ];
+            chartSeries.push( pointData );
+        };
+    }
+    return chartSeries;
+};
+
+render = function(data) {
+    // split the data set into ohlc and volume
+    var ohlc = _getOHLC(data),
+        volume = _getVolume(data);
+
+    // set the allowed units for data grouping
+    var groupingUnits = [[
+        'week',                         // unit name
+        [1]                             // allowed multiples
+    ], [
+        'month',
+        [1, 2, 3, 4, 6]
+    ]];
+
+    // create the chart
+    var chartcontainer="<div class='row'><div class='col-sm-12' id='chartcontainer'></div></div>";
+    $('#realcontent').html(chartcontainer);
+    $('#chartcontainer').highcharts('StockChart', {
+        
+        rangeSelector: {
+            selected: 0,
+            //enabled: false
+            buttons: [{
+                type: 'week',
+                count: 1,
+                text: '1w'
+            },{
+                type: 'month',
+                count: 1,
+                text: '1m'
+            }, {
+                type: 'month',
+                count: 3,
+                text: '3m'
+            }, {
+                type: 'month',
+                count: 6,
+                text: '6m'
+            }, {
+                type: 'ytd',
+                text: 'YTD'
+            }, {
+                type: 'year',
+                count: 1,
+                text: '1y'
+            }, {
+                type: 'all',
+                text: 'All'
+            }],
+        },
+
+        title: {
+            text: tmpdata.Symbol + ' Stock Value'
+        },
+        yAxis: [{
+            title: {
+                text: 'Stock Value'
+            },
+            height: 200,
+            lineWidth: 0
+        }, {
+            title: {
+                text: ''
+            },
+            top: 300,
+            height: 100,
+            offset: 0,
+            lineWidth: 0
+        }],
+        series: [{
+            type: 'area',
+            name: tmpdata.Symbol,
+            data: ohlc,
+            dataGrouping: {
+                units: groupingUnits
+            },
+             tooltip : {
+                    valueDecimals : 2,
+                    valuePrefix: '$',
+                },
+            fillColor : {
+                    linearGradient : {
+                        x1: 0,
+                        y1: 0,
+                        x2: 0,
+                        y2: 1
+                    },
+                    stops : [
+                        [0, Highcharts.getOptions().colors[0]],
+                        [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
+                    ]
+                }
+        }, 
+            {
+            type: 'column',
+            name: 'Volume',
+            data: volume,
+            yAxis: 1,
+            dataGrouping: {
+                units: groupingUnits
+            }
+        }],
+        navigation: {
+            buttonOptions: {
+                enabled: false,
+            }
+        },
+        credits: {
+            enabled:true,
+            text: "Highcharts.com",
+        }
+    });
+};
+/************************************ plotchart()***********************************/
+
+/************************************ share***********************************/
+          function share()
+          {
+               FB.init({
+                  appId      : '222730221417132',
+                  xfbml      : true,
+                  version    : 'v2.5'
+                });
+              
+              (function(d, s, id){
+                 var js, fjs = d.getElementsByTagName(s)[0];
+                 if (d.getElementById(id)) {return;}
+                 js = d.createElement(s); js.id = id;
+                 js.src = "//connect.facebook.net/en_US/sdk.js";
+                 fjs.parentNode.insertBefore(js, fjs);
+               }(document, 'script', 'facebook-jssdk'));
+              var namedetail="Current Stock Price of "+tmpdata.Name+" is "+"$"+tmpdata.LastPrice.toFixed(2);
+              var descriptiondetail="Stock Information of "+tmpdata.Name+" ("+tmpdata.Symbol+")";
+              var captiondetail="Last Traded Price: "+"$"+tmpdata.LastPrice.toFixed(2)+", Change: "+tmpdata.Change.toFixed(2)+"("+tmpdata.ChangePercent.toFixed(2)+"%)";
+              var picsrc="http://chart.finance.yahoo.com/t?s="+tmpdata.Symbol+"&lang=en-US&width=400&height=300";
+              FB.ui({
+                method: 'feed',
+                link: 'http://dev.markitondemand.com/',
+                caption: captiondetail,
+                  name:namedetail,
+                  description:descriptiondetail,
+                  picture:picsrc,
+                }, function(response){
+                        if (response && !response.error_message) {
+                            alert('Posted Successfully.');
+                        } else {
+                            alert('Not Posted');
+                        }
+                });
+          }
+/************************************ share***********************************/
+/************************************ NewsFeeds()***********************************/
+          function NewsFeeds()
+          {
+              $("#pill1").attr("class","");
+              $("#pill2").attr("class","");
+              $("#pill3").attr("class","active");
+                var request = $.ajax({  
+                  url:"http://stockinfo-1268.appspot.com/",   
+                  data:{  
+                        news:tmpdata.Symbol  
+                  },  
+                 type:"GET",   
+                 dataType:"json", 
+                 success: function(data){
+                      presentNews(data);
+                     }
+                });
+          }
+/************************************ NewsFeeds()***********************************/
+/************************************ presentNews(data)***********************************/
+          function presentNews(data)
+          {
+              var obj=data.d.results;
+              var len=obj.length;
+              var ha=$('#realcontent');
+              var detail="<div class='row'><div class='col-sm-12' id='newscontainer'></div></div>"
+              ha.html(detail);
+              var ca=$('#newscontainer');
+              for(var i=0;i<len;i++)
+              {
+                  var piece="";
+                  piece+="<div class='row'><div class='col-sm-12' style='margin-bottom:30px;background:linear-gradient(#CCC, #F0F0F0);border:1px;border-style:solid;border-color:#CCC;'>";
+                  piece+="<div class ='row' style='margin:10px 0px 10px 0px;'><div class='col-sm-12' style='text-align:left;font-size:0.9em;'><a href='"+obj[i].Url+"' target='_blank'>"+obj[i].Title+"</a>"+"</div></div>";
+                  piece+="<div class ='row' style='margin:10px 0px 10px 0px;'><div class='col-sm-12' style='text-align:left;font-size:0.9em;'>"+obj[i].Description+"</div></div>";
+                  piece+="<div class ='row' style='margin:15px 0px 10px 0px;'><div class='col-sm-12' style='text-align:left;font-size:0.9em;'><b>Publisher: "+obj[i].Source+"</b></div></div>";
+                  var tmpdate=obj[i].Date;
+                  var dateelem=new Date(tmpdate);
+                  var timeanddate=moment(dateelem.toISOString());
+                  var localtime=timeanddate.tz("America/Los_Angeles").format("DD MMM YYYY HH:mm:ss");
+                  piece+="<div class ='row' style='margin:10px 0px 20px 0px;'><div class='col-sm-12' style='text-align:left;font-size:0.9em;'><b>Date: "+localtime+"</b></div></div>";
+                  piece+="</div></div>";
+                  ca.append(piece);
+              }
+          }
+/************************************ presentNews(data)***********************************/
+/************************************ clear***********************************/
+          function clearAll()
+          {
+              $("#inputsm").val("");
+              $("#turnright").attr("disabled","disabled");
+              tmpdata="";
+              $("#error").html("");
+              if($("#stockdetail").length!=0)
+              {
+                  $(".item").remove("#stockdetail");
+                  $("#favorateList").attr("class","item active");//dont delete this line
+              }
+          }
+/************************************ clear***********************************/
+</script>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-2"></div>
+            <div class="col-sm-8">
+                <div class="searchform">
+                    <div class="row" style="text-align: center;">
+                        <h4><b>Stock Market Search</b></h4>
+                    </div>
+                    <form role="form" action="*.php" method="">
+                        <div class="row">
+                            <div class="col-sm-4"><label for="InputStockName">Enter the stock name or symbol:<span style="color:red;">*</span> </label></div>
+                            <div class="col-sm-4" id="input"><input type="text" class="form-control input-sm" id="inputsm" placeholder="Apple Inc or AAPL" required style="width:95%"></div> 
+                            <div class="col-sm-4">
+                                <div class="row">
+                                    <button type="button" class="btn btn-primary btn-sm" style="background-color:cornflowerblue;" onclick="search()">
+                                        <span class="glyphicon glyphicon-search"></span> Get Quote
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm" style="color:black;background-color:white;" onclick="clearAll()">
+                                        <span class="glyphicon glyphicon-refresh" style="color:black;"></span> Clear
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-4">
+                            </div>
+                            <div class="col-sm-4" id="error">
+                            </div>
+                            <div class="col-sm-4">
+                                <div class="logo">Powered by:<a href="http://dev.markitondemand.com/MODApis/"><img src='http://cs-server.usc.edu:45678/hw/hw8/images/mod-logo.png' width='50%' height='50%'/></a></div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="col-sm-2"></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-2"></div>
+            <div class="col-sm-8"><div class="line"></div></div>
+            <div class="col-sm-2"></div>
+        </div>
+        <div class="row" style="margin-top:20px;">
+            <div class="col-sm-2"></div>
+            <div class="col-sm-8" style="background-color:white;">
+                <div id="myCarousel" class="carousel slide" data-interval="false">
+                      <!-- Wrapper for slides -->
+                        <div id="twoSection" class="carousel-inner" role="listbox">
+                            <div class="item active" id="favorateList">
+                                 <div class="table-responsive">      
+                                    <table class="table" style="background-color:white;">
+                                        <thead>
+                                            <tr id="tableHead" style="background-color: #F0F0F0;">
+                                                
+                                                <th style="text-align:left;">Favorate list</th>
+                                                <th style="text-align:right;">
+                                                    <span class="hidden-xs">Automatic Refresh:</span>
+                                                    <span data-toggle="tooltip" data-placement="top" title="Automatic Refresh">
+                                                    <input id="Automatic_Refresh" type="checkbox" data-toggle="toggle" data-size="small" title="Automatic Refresh">
+                                                    </span>
+                                                    <button type="button" class="btn btn-primary btn-sm" style="color:black;background-color:white;" data-toggle="tooltip" data-placement="top" title="Refresh button" onclick="refresh()">
+                                                        <span class="glyphicon glyphicon-refresh" style="color:black;"></span>
+                                                    </button>
+                                                    <a class="btn btn-default btn-sm" id="turnright" disabled="disabled" href="#myCarousel" role="button" data-slide="next" data-toggle="tooltip" data-placement="top" title="Go to stock information">
+                                                        <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
+                                                        <span class="sr-only">Next</span>
+                                                    </a>
+                                                </th>
+                                                
+                                            </tr>
+                                        </thead>
+                                        <tbody id="favorateListTable">
+                                            <tr>
+                                                <td colspan="2">
+                                                    
+                                                        <table class="table table-striped" style="background-color:white;">
+                                                            <thead>
+                                                                <tr style="background-color: #F0F0F0;">
+                                                                    <th>Symbol </th>
+                                                                    <th>Company Name </th>
+                                                                    <th>Stock Price</th>
+                                                                    <th id="th1">Change (Change Percent)</th>
+                                                                    <th id="th2">Market Cap </th>
+                                                                    <th id="th3">&nbsp;</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody id="needtoinsert">
+                                                            </tbody>
+                                                        </table>
+                                                    
+                                                </td>
+                                           </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+<!--/*************************************************second page**********************************************************/-->
+<!--
+                            <div class="item" id="stockdetail">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th style="text-align:center; background-color:#F0F0F0;">
+                                                <a class="btn btn-default btn-sm" href="#myCarousel" role="button" data-slide="prev" style="float:left;">
+                                                    <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
+                                                    <span class="sr-only">Previous</span>
+                                                </a>
+                                                <div>Stock Details</div>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>
+                                                <div>
+                                                    <ul class="nav nav-pills">
+                                                        <li id="pill1" role="presentation" class="active"><a href="#" onclick="CurrentStock()"><span class="glyphicon glyphicon-time" aria-hidden="true"></span>Current Stock</a></li>
+                                                        <li id="pill2" role="presentation"><a href="#" onclick="HistoricalCharts()"><span class="glyphicon glyphicon-stats" aria-hidden="true"></span>Historical Charts</a></li>
+                                                        <li id="pill3" role="presentation"><a href="#" onclick="NewsFeeds()"><span class="glyphicon glyphicon-link" aria-hidden="true"></span>News Feeds</a></li>
+                                                    </ul>
+                                                </div>
+                                                <div class="line"></div>
+                                                <div style="margin-top:20px;" id="real content">
+-->
+<!--                     need to be copied to current stock                                         **********************-->
+<!--
+                                                    <div class='row' style='text-align:left;font-size:1em;'>
+                                                                Stock Details
+                                                        <button type='button' class='btn btn-default' aria-label='Left Align' style='float:right;' onclick='likeornot()'>
+                                                            <span class='glyphicon glyphicon-star-empty' id='favor' aria-hidden='true'></span>
+                                                        </button>
+                                                        <img src='http://cs-server.usc.edu:32929/fb_icon.png' onclick='share()' style='float:right;width:30px;height:30px;'/>
+
+                                                    </div>
+                                                    <div class='row' style='margin-top:10px;'>
+                                                        <div class="col-sm-6" id="stocktable">
+                                                            <div class='row'>
+                                                                <table class='table table-striped' style='text-align:left;font-size:0.8em;'>
+                                                                    <tbody>
+                                                                        <tr><td class='special'>Name</td><td id='Name'></td></tr>
+                                                                        <tr><td class='special'>Symbol</td><td id='Symbol'></td></tr>
+                                                                        <tr><td class='special'>Last Price</td><td id='Last Price'></td></tr>
+                                                                        <tr><td class='special'>Change (Change Percent)</td><td id='Change (Change Percent)'></td></tr>
+                                                                        <tr><td class='special'>Time and Date</td><td id='Time and Date'></td></tr>
+                                                                        <tr><td class='special'>Market Cap</td><td id='Market Cap'></td></tr>
+                                                                        <tr><td class='special'>Volume</td><td id='Volume'></td></tr>
+                                                                        <tr><td class='special'>Change YTD(Change Percent YTD)</td><td id='Change YTD(Change Percent YTD)'></td></tr>
+                                                                        <tr><td class='special'>High Price</td><td id='High Price'></td></tr>
+                                                                        <tr><td class='special'>Low Price</td><td id='Low Price'></td></tr>
+                                                                        <tr><td class='special'>Opening Price</td><td id='Opening Price'></td></tr>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                        <div class='col-sm-6' id='stockchart'>
+                                                            <div class='row' id='insertPic' style='text-align:right'>
+                                                                <img src='http://chart.finance.yahoo.com/t?s=AAPL&lang=en-US&width=400&height=300' style='width:100%;height:100%'/>
+                                                            </div>
+-->
+<!--                                                              **************** ******-->
+<!--
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+-->
+<!--/*************************************************second page**********************************************************/-->
+                        </div>
+
+                </div>
+            </div>
+            <div class="col-sm-2"></div>
+        </div>
+    </div>
+
+    <noscript></noscript>
+</body>
+</html>
