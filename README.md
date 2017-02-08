@@ -1,5 +1,6 @@
 # stock-fetcher-website
 Website which is used to search information about stock
+
 1. Designed a stock fetcher website by using technologies such as HTML, CSS, Ajax, Jquery and PHP.
 
 2. Provided a search bar which enables typeahead function for the user to search stock information.
